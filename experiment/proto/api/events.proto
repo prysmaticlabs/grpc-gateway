@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package experiment;
+option go_package = "github.com/grpc-ecosystem/grpc-gateway/experiment/proto/api";
+
+import "google/api/annotations.proto";
+
+service Events {
+  rpc StreamEvents(EventRequest) returns (stream EventResponse) {
+    option (google.api.http) = {
+      post: "/events"
+      body: "*"
+    };
+  }
+}
+
+message EventRequest {
+  repeated string topics = 1;
+}
+
+message EventResponse {
+  string event = 1;
+}
