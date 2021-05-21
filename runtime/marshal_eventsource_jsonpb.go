@@ -33,6 +33,8 @@ func (j *EventSourceJSONPb) Marshal(v interface{}) ([]byte, error) {
 		return j.marshalNonProtoField(v)
 	}
 
+	fmt.Println("Marshaling item for resposne")
+
 	var buf bytes.Buffer
 	if err := j.marshalTo(&buf, v); err != nil {
 		return nil, err
@@ -52,6 +54,13 @@ func (j *EventSourceJSONPb) marshalTo(w io.Writer, v interface{}) error {
 	}
 	b, err := j.MarshalOptions.Marshal(p)
 	if err != nil {
+		return err
+	}
+
+	if _, err = w.Write([]byte("event: attestation\n")); err != nil {
+		return err
+	}
+	if _, err = w.Write([]byte("data: ")); err != nil {
 		return err
 	}
 
@@ -144,19 +153,6 @@ func (j *EventSourceJSONPb) NewDecoder(r io.Reader) Decoder {
 	}
 }
 
-// DecoderWrapper is a wrapper around a *json.Decoder that adds
-// support for protos to the Decode method.
-type DecoderWrapper struct {
-	*json.Decoder
-	protojson.UnmarshalOptions
-}
-
-// Decode wraps the embedded decoder's Decode method to support
-// protos using a jsonpb.Unmarshaler.
-func (d DecoderWrapper) Decode(v interface{}) error {
-	return decodeJSONPb(d.Decoder, d.UnmarshalOptions, v)
-}
-
 // NewEncoder returns an Encoder which writes JSON stream into "w".
 func (j *EventSourceJSONPb) NewEncoder(w io.Writer) Encoder {
 	return EncoderFunc(func(v interface{}) error {
@@ -168,111 +164,6 @@ func (j *EventSourceJSONPb) NewEncoder(w io.Writer) Encoder {
 		_, err := w.Write(j.Delimiter())
 		return err
 	})
-}
-
-func unmarshalJSONPb(data []byte, unmarshaler protojson.UnmarshalOptions, v interface{}) error {
-	d := json.NewDecoder(bytes.NewReader(data))
-	return decodeJSONPb(d, unmarshaler, v)
-}
-
-func decodeJSONPb(d *json.Decoder, unmarshaler protojson.UnmarshalOptions, v interface{}) error {
-	p, ok := v.(proto.Message)
-	if !ok {
-		return decodeNonProtoField(d, unmarshaler, v)
-	}
-
-	// Decode into bytes for marshalling
-	var b json.RawMessage
-	err := d.Decode(&b)
-	if err != nil {
-		return err
-	}
-
-	return unmarshaler.Unmarshal([]byte(b), p)
-}
-
-func decodeNonProtoField(d *json.Decoder, unmarshaler protojson.UnmarshalOptions, v interface{}) error {
-	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr {
-		return fmt.Errorf("%T is not a pointer", v)
-	}
-	for rv.Kind() == reflect.Ptr {
-		if rv.IsNil() {
-			rv.Set(reflect.New(rv.Type().Elem()))
-		}
-		if rv.Type().ConvertibleTo(typeProtoMessage) {
-			// Decode into bytes for marshalling
-			var b json.RawMessage
-			err := d.Decode(&b)
-			if err != nil {
-				return err
-			}
-
-			return unmarshaler.Unmarshal([]byte(b), rv.Interface().(proto.Message))
-		}
-		rv = rv.Elem()
-	}
-	if rv.Kind() == reflect.Map {
-		if rv.IsNil() {
-			rv.Set(reflect.MakeMap(rv.Type()))
-		}
-		conv, ok := convFromType[rv.Type().Key().Kind()]
-		if !ok {
-			return fmt.Errorf("unsupported type of map field key: %v", rv.Type().Key())
-		}
-
-		m := make(map[string]*json.RawMessage)
-		if err := d.Decode(&m); err != nil {
-			return err
-		}
-		for k, v := range m {
-			result := conv.Call([]reflect.Value{reflect.ValueOf(k)})
-			if err := result[1].Interface(); err != nil {
-				return err.(error)
-			}
-			bk := result[0]
-			bv := reflect.New(rv.Type().Elem())
-			if err := unmarshalJSONPb([]byte(*v), unmarshaler, bv.Interface()); err != nil {
-				return err
-			}
-			rv.SetMapIndex(bk, bv.Elem())
-		}
-		return nil
-	}
-	if rv.Kind() == reflect.Slice {
-		var sl []json.RawMessage
-		if err := d.Decode(&sl); err != nil {
-			return err
-		}
-		if sl != nil {
-			rv.Set(reflect.MakeSlice(rv.Type(), 0, 0))
-		}
-		for _, item := range sl {
-			bv := reflect.New(rv.Type().Elem())
-			if err := unmarshalJSONPb([]byte(item), unmarshaler, bv.Interface()); err != nil {
-				return err
-			}
-			rv.Set(reflect.Append(rv, bv.Elem()))
-		}
-		return nil
-	}
-	if _, ok := rv.Interface().(protoEnum); ok {
-		var repr interface{}
-		if err := d.Decode(&repr); err != nil {
-			return err
-		}
-		switch v := repr.(type) {
-		case string:
-			// TODO(yugui) Should use proto.StructProperties?
-			return fmt.Errorf("unmarshaling of symbolic enum %q not supported: %T", repr, rv.Interface())
-		case float64:
-			rv.Set(reflect.ValueOf(int32(v)).Convert(rv.Type()))
-			return nil
-		default:
-			return fmt.Errorf("cannot assign %#v into Go type %T", repr, rv.Interface())
-		}
-	}
-	return d.Decode(v)
 }
 
 // Delimiter for newline encoded JSON streams.
