@@ -79,14 +79,12 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 			handleForwardResponseStreamError(ctx, wroteHeader, marshaler, w, req, mux, err)
 			return
 		}
-		if _, err = w.Write([]byte("event: attestation\n")); err != nil {
-			grpclog.Infof("Failed to send response chunk: %v", err)
-			return
-		}
+
 		if _, err = w.Write([]byte("data: ")); err != nil {
 			grpclog.Infof("Failed to send response chunk: %v", err)
 			return
 		}
+
 		if _, err = w.Write(buf); err != nil {
 			grpclog.Infof("Failed to send response chunk: %v", err)
 			return

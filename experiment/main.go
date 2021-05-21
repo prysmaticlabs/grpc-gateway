@@ -82,9 +82,6 @@ func main() {
 		gwruntime.WithMarshalerOption(
 			gwruntime.MIMEWildcard, &gwruntime.JSONPb{},
 		),
-		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
-		),
 	)
 	dialOpts := []grpc.DialOption{grpc.WithInsecure()}
 	ctx := context.Background()

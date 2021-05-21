@@ -8,8 +8,7 @@ import "google/api/annotations.proto";
 service Events {
   rpc StreamEvents(EventRequest) returns (stream EventResponse) {
     option (google.api.http) = {
-      post: "/events"
-      body: "*"
+      get: "/events"
     };
   }
 }

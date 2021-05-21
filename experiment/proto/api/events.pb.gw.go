@@ -13,14 +13,14 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
+	"github.com/golang/protobuf/descriptor"
+	"github.com/golang/protobuf/proto"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/grpc-ecosystem/grpc-gateway/utilities"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 )
 
 // Suppress "imported and not used" errors
@@ -29,17 +29,20 @@ var _ io.Reader
 var _ status.Status
 var _ = runtime.String
 var _ = utilities.NewDoubleArray
-var _ = metadata.Join
+var _ = descriptor.ForMessage
+
+var (
+	filter_Events_StreamEvents_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+)
 
 func request_Events_StreamEvents_0(ctx context.Context, marshaler runtime.Marshaler, client EventsClient, req *http.Request, pathParams map[string]string) (Events_StreamEventsClient, runtime.ServerMetadata, error) {
 	var protoReq EventRequest
 	var metadata runtime.ServerMetadata
 
-	newReader, berr := utilities.IOReaderFactory(req.Body)
-	if berr != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Events_StreamEvents_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -59,10 +62,9 @@ func request_Events_StreamEvents_0(ctx context.Context, marshaler runtime.Marsha
 // RegisterEventsHandlerServer registers the http handlers for service Events to "mux".
 // UnaryRPC     :call EventsServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterEventsHandlerFromEndpoint instead.
 func RegisterEventsHandlerServer(ctx context.Context, mux *runtime.ServeMux, server EventsServer) error {
 
-	mux.Handle("POST", pattern_Events_StreamEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Events_StreamEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
 		_, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -110,11 +112,11 @@ func RegisterEventsHandler(ctx context.Context, mux *runtime.ServeMux, conn *grp
 // "EventsClient" to call the correct interceptors.
 func RegisterEventsHandlerClient(ctx context.Context, mux *runtime.ServeMux, client EventsClient) error {
 
-	mux.Handle("POST", pattern_Events_StreamEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Events_StreamEvents_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/experiment.Events/StreamEvents")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -134,7 +136,7 @@ func RegisterEventsHandlerClient(ctx context.Context, mux *runtime.ServeMux, cli
 }
 
 var (
-	pattern_Events_StreamEvents_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"events"}, ""))
+	pattern_Events_StreamEvents_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"events"}, "", runtime.AssumeColonVerbOpt(true)))
 )
 
 var (
