@@ -93,13 +93,12 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 
 		if isEventSource {
 			if writeEventHeader {
-				eventHeaderString := fmt.Sprintf("event: %s\n", eventHeader)
-				if _, err = w.Write([]byte(eventHeaderString)); err != nil {
+				if _, err = fmt.Fprintf(w, "event: %s \n\n", eventHeader); err != nil {
 					grpclog.Infof("Failed to send response chunk: %v", err)
 					return
 				}
 			}
-			if _, err = w.Write([]byte("data: ")); err != nil {
+			if _, err := fmt.Fprintf(w, "data: %s \n\n", buf); err != nil {
 				grpclog.Infof("Failed to send response chunk: %v", err)
 				return
 			}
