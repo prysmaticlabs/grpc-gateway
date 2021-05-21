@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -49,6 +50,7 @@ func (s *server) StreamEvents(
 	for {
 		select {
 		case <-ticker.C:
+			fmt.Println(req)
 			if err := stream.Send(&pb.EventResponse{Event: "hi"}); err != nil {
 				return err
 			}

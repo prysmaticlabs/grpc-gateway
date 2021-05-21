@@ -80,6 +80,7 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 			return
 		}
 
+		// TODO: Only if event stream marshaler
 		if _, err = w.Write([]byte("data: ")); err != nil {
 			grpclog.Infof("Failed to send response chunk: %v", err)
 			return
