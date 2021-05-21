@@ -219,6 +219,7 @@ func (s *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Verb out here is to memoize for the fallback case below
 	var verb string
 
+	fmt.Println("Handling", s.handlers, r.Method)
 	for _, h := range s.handlers[r.Method] {
 		// If the pattern has a verb, explicitly look for a suffix in the last
 		// component that matches a colon plus the verb. This allows us to

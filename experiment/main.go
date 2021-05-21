@@ -14,6 +14,7 @@ import (
 
 	pb "github.com/grpc-ecosystem/grpc-gateway/v2/experiment/proto/api"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/rs/cors"
 	"google.golang.org/grpc"
 )
 
@@ -81,6 +82,9 @@ func main() {
 		gwruntime.WithMarshalerOption(
 			gwruntime.MIMEWildcard, &gwruntime.JSONPb{},
 		),
+		gwruntime.WithMarshalerOption(
+			"text/event-stream", &gwruntime.EventSourceJSONPb{},
+		),
 	)
 	dialOpts := []grpc.DialOption{grpc.WithInsecure()}
 	ctx := context.Background()
@@ -88,7 +92,7 @@ func main() {
 		log.Fatalf("Could not register API handler with grpc endpoint: %v", err)
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/", gwmux)
+	mux.Handle("/", corsMiddleware(gwmux))
 	gatewayServer := &http.Server{
 		Addr:    grpcGatewayAddress,
 		Handler: mux,
@@ -114,4 +118,15 @@ func main() {
 
 	// Wait for stop channel to be closed.
 	<-stop
+}
+
+func corsMiddleware(h http.Handler) http.Handler {
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodOptions},
+		AllowCredentials: true,
+		MaxAge:           600,
+		AllowedHeaders:   []string{"*"},
+	})
+	return c.Handler(h)
 }

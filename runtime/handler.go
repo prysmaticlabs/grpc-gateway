@@ -16,6 +16,7 @@ import (
 
 // ForwardResponseStream forwards the stream from gRPC server to REST client.
 func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshaler, w http.ResponseWriter, req *http.Request, recv func() (proto.Message, error), opts ...func(context.Context, http.ResponseWriter, proto.Message) error) {
+	fmt.Println("Dealing with a stream")
 	f, ok := w.(http.Flusher)
 	if !ok {
 		grpclog.Infof("Flush not supported in %T", w)
@@ -37,12 +38,7 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 		return
 	}
 
-	var delimiter []byte
-	if d, ok := marshaler.(Delimited); ok {
-		delimiter = d.Delimiter()
-	} else {
-		delimiter = []byte("\n")
-	}
+	delimiter := []byte("\n")
 
 	var wroteHeader bool
 	for {
@@ -60,7 +56,7 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 		}
 
 		if !wroteHeader {
-			w.Header().Set("Content-Type", marshaler.ContentType(resp))
+			w.Header().Set("Content-Type", "text/event-stream")
 		}
 
 		var buf []byte
@@ -82,6 +78,14 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 		if err != nil {
 			grpclog.Infof("Failed to marshal response chunk: %v", err)
 			handleForwardResponseStreamError(ctx, wroteHeader, marshaler, w, req, mux, err)
+			return
+		}
+		if _, err = w.Write([]byte("event: attestation\n")); err != nil {
+			grpclog.Infof("Failed to send response chunk: %v", err)
+			return
+		}
+		if _, err = w.Write([]byte("data: ")); err != nil {
+			grpclog.Infof("Failed to send response chunk: %v", err)
 			return
 		}
 		if _, err = w.Write(buf); err != nil {

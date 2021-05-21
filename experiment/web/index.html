@@ -1,0 +1,11 @@
+<html>
+<head>
+    <title>Testing</title>
+    <script>
+        let source = new EventSource("http://localhost:5000/events?topics=attestations");
+        source.onmessage = (src, msg) => {
+           console.log(msg);
+        };
+    </script>
+</head>
+</html>
