@@ -2,10 +2,11 @@
 <head>
     <title>Testing</title>
     <script>
-        let source = new EventSource("http://localhost:5000/events?topics=attestations");
-        source.onmessage = (src, msg) => {
-           console.log(msg);
+        const handleEvent = (msg) => {
+            console.log(msg);
         };
+        let source = new EventSource("http://localhost:5000/events?topics=attestations");
+        source.addEventListener("attestations", handleEvent);
     </script>
 </head>
 </html>

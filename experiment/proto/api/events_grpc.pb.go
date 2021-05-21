@@ -4,6 +4,7 @@ package api
 
 import (
 	context "context"
+	gateway "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -44,7 +45,7 @@ func (c *eventsClient) StreamEvents(ctx context.Context, in *EventRequest, opts 
 }
 
 type Events_StreamEventsClient interface {
-	Recv() (*EventResponse, error)
+	Recv() (*gateway.EventSource, error)
 	grpc.ClientStream
 }
 
@@ -52,8 +53,8 @@ type eventsStreamEventsClient struct {
 	grpc.ClientStream
 }
 
-func (x *eventsStreamEventsClient) Recv() (*EventResponse, error) {
-	m := new(EventResponse)
+func (x *eventsStreamEventsClient) Recv() (*gateway.EventSource, error) {
+	m := new(gateway.EventSource)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func _Events_StreamEvents_Handler(srv interface{}, stream grpc.ServerStream) err
 }
 
 type Events_StreamEventsServer interface {
-	Send(*EventResponse) error
+	Send(*gateway.EventSource) error
 	grpc.ServerStream
 }
 
@@ -105,7 +106,7 @@ type eventsStreamEventsServer struct {
 	grpc.ServerStream
 }
 
-func (x *eventsStreamEventsServer) Send(m *EventResponse) error {
+func (x *eventsStreamEventsServer) Send(m *gateway.EventSource) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -120,5 +121,5 @@ var _Events_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "api/events.proto",
+	Metadata: "experiment/proto/api/events.proto",
 }

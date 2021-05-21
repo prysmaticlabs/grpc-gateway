@@ -140,19 +140,6 @@ func (j *EventSourceJSONPb) NewDecoder(r io.Reader) Decoder {
 	}
 }
 
-// DecoderWrapper is a wrapper around a *json.Decoder that adds
-// support for protos to the Decode method.
-type DecoderWrapper struct {
-	*json.Decoder
-	protojson.UnmarshalOptions
-}
-
-// Decode wraps the embedded decoder's Decode method to support
-// protos using a jsonpb.Unmarshaler.
-func (d DecoderWrapper) Decode(v interface{}) error {
-	return decodeJSONPb(d.Decoder, d.UnmarshalOptions, v)
-}
-
 // NewEncoder returns an Encoder which writes JSON stream into "w".
 func (j *EventSourceJSONPb) NewEncoder(w io.Writer) Encoder {
 	return EncoderFunc(func(v interface{}) error {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -14,9 +13,11 @@ import (
 	"time"
 
 	pb "github.com/grpc-ecosystem/grpc-gateway/v2/experiment/proto/api"
+	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var (
@@ -50,8 +51,14 @@ func (s *server) StreamEvents(
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println(req)
-			if err := stream.Send(&pb.EventResponse{Event: "hi"}); err != nil {
+			data, err := anypb.New(req)
+			if err != nil {
+				return err
+			}
+			if err := stream.Send(&gwpb.EventSource{
+				Event: "attestation",
+				Data:  data,
+			}); err != nil {
 				return err
 			}
 		case <-stream.Context().Done():

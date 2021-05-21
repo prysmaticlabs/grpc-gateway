@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/textproto"
 
+	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -59,6 +60,9 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 		}
 
 		var buf []byte
+		var isEventSource bool
+		var writeEventHeader bool
+		var eventHeader string
 		httpBody, isHTTPBody := resp.(*httpbody.HttpBody)
 		switch {
 		case resp == nil:
@@ -70,20 +74,35 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 			if rb, ok := resp.(responseBody); ok {
 				result["result"] = rb.XXX_ResponseBody()
 			}
-
-			buf, err = marshaler.Marshal(result)
+			if item, ok := resp.(*gwpb.EventSource); ok {
+				isEventSource = true
+				if item.Event != "" {
+					writeEventHeader = true
+					eventHeader = item.Event
+				}
+				buf, err = marshaler.Marshal(item.Data)
+			} else {
+				buf, err = marshaler.Marshal(resp)
+			}
 		}
-
 		if err != nil {
 			grpclog.Infof("Failed to marshal response chunk: %v", err)
 			handleForwardResponseStreamError(ctx, wroteHeader, marshaler, w, req, mux, err)
 			return
 		}
 
-		// TODO: Only if event stream marshaler
-		if _, err = w.Write([]byte("data: ")); err != nil {
-			grpclog.Infof("Failed to send response chunk: %v", err)
-			return
+		if isEventSource {
+			if writeEventHeader {
+				eventHeaderString := fmt.Sprintf("event: %s\n", eventHeader)
+				if _, err = w.Write([]byte(eventHeaderString)); err != nil {
+					grpclog.Infof("Failed to send response chunk: %v", err)
+					return
+				}
+			}
+			if _, err = w.Write([]byte("data: ")); err != nil {
+				grpclog.Infof("Failed to send response chunk: %v", err)
+				return
+			}
 		}
 
 		if _, err = w.Write(buf); err != nil {
