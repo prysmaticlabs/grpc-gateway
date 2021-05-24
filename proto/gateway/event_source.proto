@@ -5,6 +5,20 @@ import "google/protobuf/any.proto";
 package gateway;
 option go_package = "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway";
 
+// `EventSource` defines a protocol buffer message used to notify gRPC gateway to
+// transcode streaming endpoints into text/event-stream content types for supporting
+// the modern EventSource browser web API https://html.spec.whatwg.org/multipage/server-sent-events.html.
+//
+// gRPC server backends that want to return text/event-stream data should be using something as follows
+//
+//     service SomeBackend {
+//       rpc StreamEvents(req SomeRequest) returns (stream gateway.EventSource)
+//     }
+//
+//     message EventRequest {
+//       repeated string topics = 1;
+//     }
+//
 message EventSource {
   string event = 1;
   google.protobuf.Any data = 2;
