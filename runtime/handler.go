@@ -38,7 +38,12 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 		return
 	}
 
-	delimiter := []byte("\n")
+	var delimiter []byte
+	if d, ok := marshaler.(Delimited); ok {
+		delimiter = d.Delimiter()
+	} else {
+		delimiter = []byte("\n")
+	}
 
 	var wroteHeader bool
 	for {
@@ -56,7 +61,7 @@ func ForwardResponseStream(ctx context.Context, mux *ServeMux, marshaler Marshal
 		}
 
 		if !wroteHeader {
-			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Content-Type", marshaler.ContentType(resp))
 		}
 
 		var buf []byte
