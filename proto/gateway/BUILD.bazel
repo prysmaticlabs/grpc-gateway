@@ -14,7 +14,7 @@ filegroup(
 go_library(
     name = "go_default_library",
     embed = [":event_source_go_proto"],
-    importpath = "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options",
+    importpath = "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway",
 )
 
 proto_library(
